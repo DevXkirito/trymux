@@ -13,35 +13,6 @@ from telegram import Update, MessageEntity
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from telegram.error import BadRequest
 
-print("Installing required Python libraries...")
-# We only need telegram-bot and ffmpeg
-!pip install python-telegram-bot==13.7 --quiet
-!pip install ffmpeg-python --quiet
-print("Installation complete.")
-
-# --- Font Installation ---
-FONT_URL = "https://raw.githubusercontent.com/DevXkirito/Subtitle-Muxer/main/fonts/HelveticaRounded-Bold.ttf"
-FONT_DIR = "/usr/share/fonts/truetype/custom/"
-FONT_PATH = os.path.join(FONT_DIR, "HelveticaRounded-Bold.ttf")
-print(f"\nDownloading and installing font to {FONT_PATH}...")
-os.makedirs(FONT_DIR, exist_ok=True)
-try:
-    response = requests.get(FONT_URL, stream=True)
-    response.raise_for_status()
-    with open(FONT_PATH, 'wb') as f:
-        f.write(response.content)
-    print("Font downloaded successfully.")
-    # Update the font cache
-    !fc-cache -f -v
-    print("Font cache updated.")
-except requests.exceptions.RequestException as e:
-    print(f"Error downloading font: {e}")
-
-# ==============================================================================
-# CELL 2: THE TELEGRAM BOT CODE
-# After running the setup cell, add your bot token below.
-# ==============================================================================
-
 # --- Configuration ---
 BOT_TOKEN = "5369686193:AAFOsEHdKOmMQ0V5YaropYvkyZXhTpvtvj8"  # <-- IMPORTANT: PASTE YOUR BOT TOKEN HERE
 
@@ -270,10 +241,15 @@ def process_files(update: Update, context: CallbackContext) -> None:
             return
 
         status_message.edit_text("⚙️ Files downloaded. Hardcoding subtitles...")
+        
+        # ⭐ 1. Define the direct path to your font file
+        font_path = os.path.abspath('./fonts/HelveticaRounded-Bold.ttf')
+
+        # ⭐ 2. Modify the ffmpeg command to use 'FontFile=' instead of 'FontName='
         ffmpeg_command = [
             'ffmpeg', '-i', video_path,
-            '-vf', f"subtitles={subtitle_path}:force_style='FontName=HelveticaRounded-Bold,FontSize=20,MarginV=40'",
-            '-c:v', 'libx264', '-crf', '28', '-preset', 'veryfast',
+            '-vf', f"subtitles={subtitle_path}:force_style='FontFile={font_path},FontSize=20,MarginV=40'",
+            '-c:v', 'libx265', '-crf', '28', '-preset', 'veryfast',
             '-c:a', 'aac', '-b:a', '128k', '-y',
             '-progress', 'pipe:1', output_path
         ]
@@ -331,7 +307,7 @@ def main() -> None:
     dispatcher.add_handler(MessageHandler(Filters.document | Filters.video, handle_file))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text))
     updater.start_polling()
-    print("Bot is now running. Press Ctrl+C to stop.")
+    print("Bot is now running.")
     updater.idle()
 
 if __name__ == '__main__':
